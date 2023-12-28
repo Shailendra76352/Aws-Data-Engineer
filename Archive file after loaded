@@ -1,0 +1,44 @@
+
+import boto3
+import os
+
+s3 = boto3.client('s3')
+
+## Write your code here
+def lambda_handler(event, context):
+    print("Event:", event)
+    #Extract the required information for Glue job
+    job_run_id = event.get('value1', '')  # Use get method to handle KeyError
+    if not job_run_id:
+        return {
+            'statusCode': 400,
+            'body': 'Error: jobRunId not found in the event.'
+        }
+    output_location = 's3://file-output-bucket-demo/Payments/RealTimePayment/'
+    
+    Archive_location = 's3://file-output-bucket-demo/Payments/RealTimePayment/Archive/'
+    
+    #List files in the Glue job output location
+    files_to_archive = s3.list_objects_v2(Bucket=bucket_name, Prefix=job_run_id)['Contents']
+    
+    #Move files to archive location
+    for file_info in files_to_archive:
+        file_key = file_info['Key']
+        archive_key = os.path.join(archive_bucket, os.path.basename(file_key))
+        
+        #Copy file to the archive location
+        s3.copy_object(Bucket=archive_bucket, CopySource={'Bucket': output_location, 'Key':file_key}, Key=archive_key)
+  
+        
+        # Delete the original file from the Glue output location
+        s3.delete_object(Bucket=output_location, Key=file_key)
+    
+        
+        
+    return {
+        'statusCode':200,
+        'body': 'More than 500bytes files deleted successfully'
+    }
+   
+
+
