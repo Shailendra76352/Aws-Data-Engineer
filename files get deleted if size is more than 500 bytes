@@ -1,0 +1,29 @@
+
+import boto3
+from datetime import datetime, timedelta
+
+s3 = boto3.client('s3')
+
+## Write your code here
+def lambda_handler(event, context):
+    bucket_name = 'file-input-bucket-demo'
+    prefix = 'Payments/RealTimePayment/'
+    
+    response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+    print(f"response: {response}")
+    
+    for obj in response.get('Contents',[]):
+        
+        file_size = obj['Size']
+        print(f"Size: {file_size} bytes")
+        
+        
+        if file_size>500:
+            s3.delete_object(Bucket=bucket_name, Key=obj['Key'])
+            
+            
+    return {
+        'statusCode':200,
+        'body': 'More than 500bytes files deleted successfully'
+    }
+   
