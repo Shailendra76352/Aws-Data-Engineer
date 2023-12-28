@@ -1,0 +1,29 @@
+
+import boto3
+from datetime import datetime, timedelta
+
+s3 = boto3.client('s3')
+
+## Write your code here
+def lambda_handler(event, context):
+    bucket_name = 'file-input-bucket-demo'
+    prefix = 'Payments/RealTimePayment/'
+    
+    response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+    print(response)
+    
+    for obj in response.get('Contents',[]):
+        last_modified = obj['LastModified'].replace(tzinfo=None)
+        print(last_modified)
+        if datetime.now() - last_modified > timedelta(days=30):
+            s3.delete_object(Bucket=bucket_name, Key=obj['Key'])
+            
+            
+            
+    return {
+        'statusCode':200,
+        'body': 'Old files deleted successfully'
+    }
+   
+
+
