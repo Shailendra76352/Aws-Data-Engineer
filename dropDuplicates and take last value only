@@ -1,0 +1,37 @@
+from datetime import datetime
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.dynamicframe import DynamicFrame
+from awsglue.job import Job
+
+# Initialize Spark and Glue contexts
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+
+# Get today's date in the required format (YYYYMMDD)
+today_date = datetime.now().strftime("%Y%m%d")
+
+# Specify the S3 path where your files are located
+s3_path = "s3://your-bucket/your-prefix/file_name_" + today_date + ".csv"
+
+# Use the wildcard to read the file for today's date
+dyf = glueContext.create_dynamic_frame.from_catalog(
+    database="your_database",
+    table_name="your_table",
+    additional_options={"paths": [s3_path], "recurse": True}
+)
+
+# Drop duplicates based on the "name" column, keeping the first occurrence (earliest date)
+dyf_deduplicated = dyf.drop_duplicates(['name'], keep='first')
+
+# Perform your transformations or other operations on the deduplicated DynamicFrame
+# For example, you can print the resulting DynamicFrame
+dyf_deduplicated.toDF().show()
+
+# Write the deduplicated DynamicFrame back to a location of your choice
+glueContext.write_dynamic_frame.from_catalog(
+    frame=dyf_deduplicated,
+    database="your_database",
+    table_name="your_output_table"
+)
