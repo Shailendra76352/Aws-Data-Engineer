@@ -1,0 +1,35 @@
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from datetime import datetime
+
+## @params: [JOB_NAME]
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+today_date = datetime.now().strftime("%Y%m%d")
+
+s3_src_path = 's3://file-input-bucket-demo/Payments/RealTimePayment/employee_details_' + today_date + '.csv'
+s3_tgt_path = 's3://file-output-bucket-demo/Payments/RealTimePayment/'
+
+dyf = glueContext.create_dynamic_frame.from_catalog(
+    database = 'bookdb_json',
+    table_name = 's3_employees_csv',
+    additional_options={"paths":[s3_src_path], "recurse":True})
+
+glueContext.write_dynamic_frame.from_catalog(
+    frame=dyf,
+    database="bookdb_json",
+    table_name="s3_employees_csv",
+    additional_options={"paths":[s3_tgt_path], "recurse":True})
+
+
+job.commit()
